@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SQL Injection Scanner - Hacker Mode</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #0d1117;
+      color: #00ff88;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 100px auto;
+      background-color: #161b22;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 0 20px #00ff88;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #00ff88;
+      text-shadow: 0 0 5px #00ff88;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 15px;
+      background-color: #0d1117;
+      border: 2px solid #00ff88;
+      border-radius: 5px;
+      color: #00ff88;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 15px;
+      background-color: #00ff88;
+      color: #0d1117;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 0 10px #00ff88;
+      transition: all 0.3s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #0d1117;
+      color: #00ff88;
+      border: 2px solid #00ff88;
+    }
+
+    #result {
+      margin-top: 30px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .blinking {
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .malicious {
+      color: red;
+      text-shadow: 0 0 10px red;
+    }
+
+    .safe {
+      color: #00ff88;
+      text-shadow: 0 0 5px #00ff88;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🚨 SQL Injection Detector</h1>
+    <form id="checkForm">
+      <input type="text" id="userInput" placeholder="Enter suspicious input here..." required>
+      <button type="submit">Scan Now</button>
+    </form>
+    <p id="result"></p>
+  </div>
+
+  <!-- Keyboard Sound -->
+  <audio id="keySound" src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-hard-keystroke-1361.mp3" preload="auto"></audio>
+
+  <script>
+    // Keyboard sound effect
+    const inputBox = document.getElementById("userInput");
+    const keySound = document.getElementById("keySound");
+    inputBox.addEventListener("keydown", () => {
+      keySound.currentTime = 0;
+      keySound.play();
+    });
+
+    // Fetch API
+    document.getElementById("checkForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+      const input = inputBox.value;
+
+      const res = await fetch("/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: input })
+      });
+
+      const data = await res.json();
+      const resultBox = document.getElementById("result");
+
+      if (data.result === "malicious") {
+        resultBox.textContent = "⚠️ MALICIOUS INJECTION DETECTED!";
+        resultBox.className = "malicious blinking";
+      } else {
+        resultBox.textContent = "✅ This input is SAFE.";
+        resultBox.className = "safe blinking";
+      }
+    });
+  </script>
+
+</body>
+</html>
