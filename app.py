@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 import joblib
+import os
+
 
 app = Flask(__name__)
 
-# মডেল ও ভেক্টরাইজার লোড করো
+
 model = joblib.load("sql_model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
 
@@ -18,5 +20,7 @@ def predict():
     result = model.predict(vector)
     return jsonify({"result": "malicious" if result[0] == 1 else "safe"})
 
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
