@@ -5,45 +5,39 @@ import re
 
 app = Flask(__name__)
 
-# মডেল এবং ভেক্টরাইজার লোড করা
 model = joblib.load("sql_model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
 
-# SQL Injection প্যাটার্ন চেক করার জন্য Regex
+# Regex pattern strictly for actual dangerous SQL Injection payloads
 SQLI_PATTERNS = re.compile(
-    r"(\b(load_file|outfile|dumpfile|char|concat|exec|union|select|insert|update|delete|drop|alter|truncate)\b|[\';#]|\-\-)",
+    r"(\b(load_file|outfile|dumpfile|exec|concat)\b|[\';#]|\-\-|/\*|\*/|union\s+select|or\s+1\s*=\s*1|and\s+1\s*=\s*1)",
     re.IGNORECASE
 )
 
-def normalize_input(text):
-    """অতিরিক্ত স্পেস সরিয়ে লোয়ারকেস করার ফাংশন"""
-    # ফাংশন ও ব্র্যাকেটের ভেতরের স্পেস রিমুভ করে (যেমন: load_file ( -> load_file()
-    text = re.sub(r'\s*\(\s*', '(', text)
-    text = re.sub(r'\s*\)\s*', ')', text)
-    text = re.sub(r'\s+', ' ', text)
-    return text.strip().lower()
-
-@app.route("/")
-def home():
-    return render_template("index.html")
+# Standard Safe Queries Regex Check (Legitimate SQL)
+SAFE_SQL_PATTERN = re.compile(
+    r"^\s*select\s+[\w\*\, \.\t\n]+\s+from\s+\w+(\s+where\s+[\w\.\= \'\"\-]+)?\s*;?\s*$",
+    re.IGNORECASE
+)
 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        raw_data = request.json.get("input", "")
+        raw_data = request.json.get("input", "").strip()
         
         if not raw_data:
             return jsonify({"error": "No input provided"}), 400
 
-        # ১. ইনপুট নরমালাইজেশন
-        clean_data = normalize_input(raw_data)
-
-        # ২. সরাসরি Regex দিয়ে ঝুঁকিপূর্ণ ক্যোয়ারি সনাক্তকরণ (Rule-based Check)
-        if SQLI_PATTERNS.search(clean_data):
+        # 1. Direct Dangerous Pattern Check (SQLi Attack)
+        if SQLI_PATTERNS.search(raw_data):
             return jsonify({"result": "malicious"})
 
-        # ৩. AI/ML মডেলের মাধ্যমে প্রেডিকশন
-        vector = vectorizer.transform([clean_data])
+        # 2. Direct Safe SQL Query Override (Prevents False Positives)
+        if SAFE_SQL_PATTERN.match(raw_data):
+            return jsonify({"result": "safe"})
+
+        # 3. Model Prediction for edge cases
+        vector = vectorizer.transform([raw_data])
         result = model.predict(vector)
         
         prediction = "malicious" if result[0] == 1 else "safe"
