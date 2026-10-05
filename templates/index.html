@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SQLi Sentinel - Cyber Edition</title>
+  <title>SENTINEL // SQLi Threat Analyzer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
   <style>
     * {
@@ -16,238 +16,390 @@
     }
 
     body {
-      background-color: #050811;
-      color: #00ff88;
-      font-family: 'Fira Code', 'Share Tech Mono', monospace;
+      background-color: #030712;
+      color: #00ffaa;
+      font-family: 'JetBrains Mono', monospace;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       overflow-x: hidden;
       position: relative;
     }
 
-    /* Ambient Background Glow */
-    body::before {
-      content: '';
-      position: absolute;
-      width: 300px;
-      height: 300px;
-      background: radial-gradient(circle, rgba(0,255,136,0.15) 0%, rgba(0,0,0,0) 70%);
-      top: 10%;
-      left: 20%;
+    /* Animated Matrix Background */
+    #matrix-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       z-index: 0;
+      opacity: 0.18;
       pointer-events: none;
     }
 
-    .container {
-      position: relative;
+    /* Ambient CRT Scanline Overlay */
+    .scanline-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
       z-index: 1;
-      width: 90%;
-      max-width: 650px;
-      background: rgba(18, 26, 36, 0.75);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      padding: 40px;
-      border-radius: 16px;
-      border: 1px solid rgba(0, 255, 136, 0.2);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 
-                  0 0 15px rgba(0, 255, 136, 0.1);
-      transition: all 0.3s ease;
+      pointer-events: none;
     }
 
-    .container:hover {
-      border-color: rgba(0, 255, 136, 0.4);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 
-                  0 0 25px rgba(0, 255, 136, 0.25);
+    /* Top HUD Stats Bar */
+    .top-bar {
+      position: absolute;
+      top: 20px;
+      width: 90%;
+      max-width: 800px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: rgba(0, 255, 170, 0.6);
+      z-index: 2;
+      border-bottom: 1px dashed rgba(0, 255, 170, 0.2);
+      padding-bottom: 10px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background-color: #00ffaa;
+      border-radius: 50%;
+      margin-right: 6px;
+      box-shadow: 0 0 8px #00ffaa;
+      animation: pulse-dot 1.5s infinite alternate;
+    }
+
+    @keyframes pulse-dot {
+      0% { opacity: 0.3; transform: scale(0.8); }
+      100% { opacity: 1; transform: scale(1.2); }
+    }
+
+    /* Main Glassmorphic Container */
+    .container {
+      position: relative;
+      z-index: 2;
+      width: 90%;
+      max-width: 720px;
+      background: rgba(8, 15, 26, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: 40px;
+      border-radius: 12px;
+      border: 1px solid rgba(0, 255, 170, 0.25);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.9), 
+                  0 0 15px rgba(0, 255, 170, 0.15);
+      overflow: hidden;
+      animation: container-entrance 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes container-entrance {
+      0% { opacity: 0; transform: translateY(20px) scale(0.98); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Cyber Corner Brackets */
+    .container::before, .container::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: #00ffaa;
+      border-style: solid;
+      pointer-events: none;
+    }
+    .container::before { top: 0; left: 0; border-width: 2px 0 0 2px; }
+    .container::after { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
+    /* Laser Scanning Motion Effect */
+    .laser-beam {
+      position: absolute;
+      top: -100%;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, transparent, #00ffaa, transparent);
+      box-shadow: 0 0 15px #00ffaa, 0 0 30px #00ffaa;
+      opacity: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .container.scanning-active .laser-beam {
+      opacity: 1;
+      animation: scan-laser 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes scan-laser {
+      0% { top: 0%; }
+      100% { top: 100%; }
     }
 
     .header-badge {
       display: inline-block;
-      font-size: 11px;
+      font-size: 10px;
       letter-spacing: 2px;
       text-transform: uppercase;
-      color: #00ff88;
-      background: rgba(0, 255, 136, 0.1);
-      padding: 4px 12px;
-      border-radius: 20px;
-      border: 1px solid rgba(0, 255, 136, 0.3);
-      margin-bottom: 12px;
+      color: #00ffaa;
+      background: rgba(0, 255, 170, 0.08);
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 255, 170, 0.3);
+      margin-bottom: 15px;
     }
 
     h1 {
-      text-align: left;
-      margin-bottom: 25px;
-      color: #ffffff;
       font-size: 26px;
-      font-weight: 700;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 25px;
       letter-spacing: -0.5px;
     }
 
     h1 span {
-      color: #00ff88;
-      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+      color: #00ffaa;
+      text-shadow: 0 0 12px rgba(0, 255, 170, 0.6);
     }
 
-    .input-group {
+    .input-box-wrapper {
       position: relative;
-      margin-bottom: 20px;
+      margin-bottom: 12px;
     }
 
     input[type="text"] {
       width: 100%;
-      padding: 16px 20px;
-      background-color: rgba(9, 14, 23, 0.8);
-      border: 1px solid rgba(0, 255, 136, 0.3);
+      padding: 16px 18px;
+      background-color: rgba(3, 7, 18, 0.85);
+      border: 1px solid rgba(0, 255, 170, 0.25);
       border-radius: 8px;
-      color: #00ff88;
-      font-family: inherit;
-      font-size: 15px;
+      color: #00ffaa;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
       outline: none;
       transition: all 0.3s ease;
     }
 
     input[type="text"]:focus {
-      border-color: #00ff88;
-      box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
-      background-color: rgba(9, 14, 23, 0.95);
+      border-color: #00ffaa;
+      box-shadow: 0 0 15px rgba(0, 255, 170, 0.3);
+      background-color: rgba(3, 7, 18, 0.95);
     }
 
     input[type="text"]::placeholder {
-      color: rgba(0, 255, 136, 0.35);
+      color: rgba(0, 255, 170, 0.3);
+    }
+
+    /* Quick Test Sample Payload Buttons */
+    .payload-chips {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 25px;
+      flex-wrap: wrap;
+    }
+
+    .chip-label {
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 1px;
+    }
+
+    .chip {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(0, 255, 170, 0.2);
+      color: rgba(0, 255, 170, 0.8);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .chip:hover {
+      background: rgba(0, 255, 170, 0.15);
+      color: #ffffff;
+      border-color: #00ffaa;
+      transform: translateY(-1px);
     }
 
     button {
       width: 100%;
       padding: 16px;
-      background: #00ff88;
-      color: #050811;
+      background: #00ffaa;
+      color: #030712;
       border: none;
       border-radius: 8px;
       font-family: inherit;
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: 1px;
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
       cursor: pointer;
-      box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.35);
       transition: all 0.25s ease;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
     }
 
     button:hover {
       background-color: #ffffff;
-      color: #050811;
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+      box-shadow: 0 0 25px rgba(255, 255, 255, 0.7);
       transform: translateY(-2px);
     }
 
-    button:active {
-      transform: translateY(0);
-    }
-
-    /* Result Box Styling */
-    #result-container {
+    /* Analysis Result Box */
+    #result-box {
       margin-top: 25px;
-      min-height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      padding: 18px;
       border-radius: 8px;
-      transition: all 0.3s ease;
-    }
-
-    #result {
-      font-size: 15px;
+      display: none;
+      text-align: center;
+      font-size: 14px;
       font-weight: 600;
       letter-spacing: 0.5px;
-      text-align: center;
-      padding: 12px 20px;
-      width: 100%;
-      border-radius: 8px;
+      animation: result-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
-    .malicious {
+    @keyframes result-pop {
+      0% { opacity: 0; transform: scale(0.95); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .malicious-ui {
+      background: rgba(255, 51, 102, 0.12);
+      border: 1px solid rgba(255, 51, 102, 0.5);
       color: #ff3366;
-      background: rgba(255, 51, 102, 0.1);
-      border: 1px solid rgba(255, 51, 102, 0.4);
-      box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
+      box-shadow: 0 0 20px rgba(255, 51, 102, 0.25);
     }
 
-    .safe {
-      color: #00ff88;
-      background: rgba(0, 255, 136, 0.1);
-      border: 1px solid rgba(0, 255, 136, 0.4);
-      box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+    .safe-ui {
+      background: rgba(0, 255, 170, 0.1);
+      border: 1px solid rgba(0, 255, 170, 0.4);
+      color: #00ffaa;
+      box-shadow: 0 0 20px rgba(0, 255, 170, 0.2);
     }
 
-    .scanning {
-      color: #00e5ff;
-      background: rgba(0, 229, 255, 0.1);
+    .scanning-ui {
+      background: rgba(0, 229, 255, 0.08);
       border: 1px solid rgba(0, 229, 255, 0.3);
-    }
-
-    .blinking {
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.4; }
-      100% { opacity: 1; }
+      color: #00e5ff;
     }
   </style>
 </head>
 <body>
 
-  <div class="container">
-    <span class="header-badge">AI Security Engine v2.0</span>
-    <h1>SQL Injection <span>Scanner</span></h1>
+  <canvas id="matrix-canvas"></canvas>
+  <div class="scanline-grid"></div>
 
-    <form id="checkForm">
-      <div class="input-group">
-        <input type="text" id="userInput" placeholder="Enter query string (e.g., SELECT * FROM users...)" required autocomplete="off">
-      </div>
-      <button type="submit" id="scanBtn">
-        <span>RUN ANALYSIS</span>
-      </button>
-    </form>
-
-    <div id="result-container">
-      <p id="result" style="display: none;"></p>
-    </div>
+  <!-- Real-time Status Top Bar -->
+  <div class="top-bar">
+    <div><span class="status-dot"></span>CORE ENGINE: ACTIVE</div>
+    <div>MODEL: ML_SQLi_v2</div>
+    <div>SYS_LATENCY: 12ms</div>
   </div>
 
-  <!-- Keyboard Sound -->
+  <div class="container" id="mainCard">
+    <div class="laser-beam"></div>
+    <span class="header-badge">AI SEC_ANALYZER // V2.0</span>
+    <h1>SQL Injection <span>Sentinel</span></h1>
+
+    <form id="checkForm">
+      <div class="input-box-wrapper">
+        <input type="text" id="userInput" placeholder="Paste SQL query or payload to scan..." required autocomplete="off">
+      </div>
+
+      <!-- Quick Test Payload Buttons -->
+      <div class="payload-chips">
+        <span class="chip-label">QUICK TEST:</span>
+        <span class="chip" onclick="setPayload('SELECT * FROM users WHERE id = 1;')">Safe Query</span>
+        <span class="chip" onclick="setPayload('\' OR 1=1 --')">Auth Bypass</span>
+        <span class="chip" onclick="setPayload('UNION SELECT null, username, password FROM users--')">Union Attack</span>
+      </div>
+
+      <button type="submit" id="scanBtn">EXECUTE SCAN</button>
+    </form>
+
+    <div id="result-box"></div>
+  </div>
+
+  <!-- Keypress Audio -->
   <audio id="keySound" src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-hard-keystroke-1361.mp3" preload="auto"></audio>
 
   <script>
+    // 1. Matrix Background Animation
+    const canvas = document.getElementById("matrix-canvas");
+    const ctx = canvas.getContext("2d");
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+
+    const chars = "01101010100110010101001010110101001SQLINJECT0101";
+    const fontSize = 14;
+    const columns = Math.floor(canvas.width / fontSize);
+    const drops = Array(columns).fill(1);
+
+    function drawMatrix() {
+      ctx.fillStyle = "rgba(3, 7, 18, 0.08)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#00ffaa";
+      ctx.font = fontSize + "px 'JetBrains Mono', monospace";
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars.charAt(Math.floor(Math.random() * chars.length));
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+    }
+    setInterval(drawMatrix, 35);
+
+    // 2. Audio & Input Handlers
     const inputBox = document.getElementById("userInput");
     const keySound = document.getElementById("keySound");
-    const resultBox = document.getElementById("result");
+    const resultBox = document.getElementById("result-box");
+    const mainCard = document.getElementById("mainCard");
     const scanBtn = document.getElementById("scanBtn");
 
-    // Keyboard sound effect
     inputBox.addEventListener("keydown", () => {
       keySound.currentTime = 0;
-      keySound.play().catch(() => {}); // catch autoplay blocks
+      keySound.play().catch(() => {});
     });
 
-    // Form Submission & Fetch API
+    function setPayload(text) {
+      inputBox.value = text;
+      inputBox.focus();
+    }
+
+    // 3. Scan Trigger & API Integration
     document.getElementById("checkForm").addEventListener("submit", async function(e) {
       e.preventDefault();
       const input = inputBox.value.trim();
-
       if (!input) return;
 
-      // Loading State Setup
+      // Start Scanner FX
+      mainCard.classList.add("scanning-active");
       scanBtn.disabled = true;
-      scanBtn.style.opacity = "0.7";
+      scanBtn.style.opacity = "0.6";
+
       resultBox.style.display = "block";
-      resultBox.textContent = "🔍 SCANNING FOR THREATS...";
-      resultBox.className = "scanning blinking";
+      resultBox.className = "scanning-ui";
+      resultBox.innerHTML = "⚡ DEEP SCANNING PAYLOAD PATTERNS...";
 
       try {
         const res = await fetch("/predict", {
@@ -258,24 +410,27 @@
 
         const data = await res.json();
 
-        // Simulate a slight delay for better UX scanning feel
         setTimeout(() => {
-          if (data.result === "malicious") {
-            resultBox.textContent = "🚨 THREAT DETECTED: MALICIOUS SQL INJECTION";
-            resultBox.className = "malicious";
-          } else {
-            resultBox.textContent = "✅ SCAN PASSED: INPUT IS SECURE";
-            resultBox.className = "safe";
-          }
+          mainCard.classList.remove("scanning-active");
           scanBtn.disabled = false;
           scanBtn.style.opacity = "1";
-        }, 400);
+
+          if (data.result === "malicious") {
+            resultBox.className = "malicious-ui";
+            resultBox.innerHTML = "🚨 THREAT DETECTED: MALICIOUS SQL INJECTION";
+          } else {
+            resultBox.className = "safe-ui";
+            resultBox.innerHTML = "🛡️ PASSED: PAYLOAD IS SECURE";
+          }
+        }, 600);
 
       } catch (err) {
-        resultBox.textContent = "❌ ERROR: COULD NOT CONNECT TO SCANNER ENGINE";
-        resultBox.className = "malicious";
+        mainCard.classList.remove("scanning-active");
         scanBtn.disabled = false;
         scanBtn.style.opacity = "1";
+
+        resultBox.className = "malicious-ui";
+        resultBox.innerHTML = "❌ SERVER ERROR: UNABLE TO CONNECT TO SENTINEL";
       }
     });
   </script>
