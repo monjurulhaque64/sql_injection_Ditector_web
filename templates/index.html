@@ -2,138 +2,280 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SQL Injection Scanner - Hacker Mode</title>
+  <title>SQLi Sentinel - Cyber Edition</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
   <style>
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
-      background-color: #0d1117;
+    }
+
+    body {
+      background-color: #050811;
       color: #00ff88;
-      font-family: 'Share Tech Mono', monospace;
+      font-family: 'Fira Code', 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* Ambient Background Glow */
+    body::before {
+      content: '';
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(0,255,136,0.15) 0%, rgba(0,0,0,0) 70%);
+      top: 10%;
+      left: 20%;
+      z-index: 0;
+      pointer-events: none;
     }
 
     .container {
-      max-width: 700px;
-      margin: 100px auto;
-      background-color: #161b22;
+      position: relative;
+      z-index: 1;
+      width: 90%;
+      max-width: 650px;
+      background: rgba(18, 26, 36, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
       padding: 40px;
-      border-radius: 10px;
-      box-shadow: 0 0 20px #00ff88;
+      border-radius: 16px;
+      border: 1px solid rgba(0, 255, 136, 0.2);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 
+                  0 0 15px rgba(0, 255, 136, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .container:hover {
+      border-color: rgba(0, 255, 136, 0.4);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8), 
+                  0 0 25px rgba(0, 255, 136, 0.25);
+    }
+
+    .header-badge {
+      display: inline-block;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #00ff88;
+      background: rgba(0, 255, 136, 0.1);
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      margin-bottom: 12px;
     }
 
     h1 {
-      text-align: center;
-      margin-bottom: 30px;
+      text-align: left;
+      margin-bottom: 25px;
+      color: #ffffff;
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    h1 span {
       color: #00ff88;
-      text-shadow: 0 0 5px #00ff88;
+      text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 20px;
     }
 
     input[type="text"] {
       width: 100%;
-      padding: 15px;
-      background-color: #0d1117;
-      border: 2px solid #00ff88;
-      border-radius: 5px;
+      padding: 16px 20px;
+      background-color: rgba(9, 14, 23, 0.8);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+      border-radius: 8px;
       color: #00ff88;
-      font-size: 16px;
+      font-family: inherit;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus {
+      border-color: #00ff88;
+      box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
+      background-color: rgba(9, 14, 23, 0.95);
+    }
+
+    input[type="text"]::placeholder {
+      color: rgba(0, 255, 136, 0.35);
     }
 
     button {
-      margin-top: 20px;
       width: 100%;
-      padding: 15px;
-      background-color: #00ff88;
-      color: #0d1117;
+      padding: 16px;
+      background: #00ff88;
+      color: #050811;
       border: none;
-      border-radius: 5px;
-      font-size: 16px;
-      font-weight: bold;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
       cursor: pointer;
-      box-shadow: 0 0 10px #00ff88;
-      transition: all 0.3s ease-in-out;
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
+      transition: all 0.25s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
     }
 
     button:hover {
-      background-color: #0d1117;
-      color: #00ff88;
-      border: 2px solid #00ff88;
+      background-color: #ffffff;
+      color: #050811;
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+      transform: translateY(-2px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    /* Result Box Styling */
+    #result-container {
+      margin-top: 25px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      transition: all 0.3s ease;
     }
 
     #result {
-      margin-top: 30px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
       text-align: center;
-      font-size: 18px;
-      font-weight: bold;
-    }
-
-    .blinking {
-      animation: blink 1s infinite;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0; }
+      padding: 12px 20px;
+      width: 100%;
+      border-radius: 8px;
     }
 
     .malicious {
-      color: red;
-      text-shadow: 0 0 10px red;
+      color: #ff3366;
+      background: rgba(255, 51, 102, 0.1);
+      border: 1px solid rgba(255, 51, 102, 0.4);
+      box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
     }
 
     .safe {
       color: #00ff88;
-      text-shadow: 0 0 5px #00ff88;
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.4);
+      box-shadow: 0 0 15px rgba(0, 255, 136, 0.2);
+    }
+
+    .scanning {
+      color: #00e5ff;
+      background: rgba(0, 229, 255, 0.1);
+      border: 1px solid rgba(0, 229, 255, 0.3);
+    }
+
+    .blinking {
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.4; }
+      100% { opacity: 1; }
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>🚨 SQL Injection Detector</h1>
+    <span class="header-badge">AI Security Engine v2.0</span>
+    <h1>SQL Injection <span>Scanner</span></h1>
+
     <form id="checkForm">
-      <input type="text" id="userInput" placeholder="Enter suspicious input here..." required>
-      <button type="submit">Scan Now</button>
+      <div class="input-group">
+        <input type="text" id="userInput" placeholder="Enter query string (e.g., SELECT * FROM users...)" required autocomplete="off">
+      </div>
+      <button type="submit" id="scanBtn">
+        <span>RUN ANALYSIS</span>
+      </button>
     </form>
-    <p id="result"></p>
+
+    <div id="result-container">
+      <p id="result" style="display: none;"></p>
+    </div>
   </div>
 
   <!-- Keyboard Sound -->
   <audio id="keySound" src="https://assets.mixkit.co/sfx/preview/mixkit-typewriter-hard-keystroke-1361.mp3" preload="auto"></audio>
 
   <script>
-    // Keyboard sound effect
     const inputBox = document.getElementById("userInput");
     const keySound = document.getElementById("keySound");
+    const resultBox = document.getElementById("result");
+    const scanBtn = document.getElementById("scanBtn");
+
+    // Keyboard sound effect
     inputBox.addEventListener("keydown", () => {
       keySound.currentTime = 0;
-      keySound.play();
+      keySound.play().catch(() => {}); // catch autoplay blocks
     });
 
-    // Fetch API
+    // Form Submission & Fetch API
     document.getElementById("checkForm").addEventListener("submit", async function(e) {
       e.preventDefault();
-      const input = inputBox.value;
+      const input = inputBox.value.trim();
 
-      const res = await fetch("/predict", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: input })
-      });
+      if (!input) return;
 
-      const data = await res.json();
-      const resultBox = document.getElementById("result");
+      // Loading State Setup
+      scanBtn.disabled = true;
+      scanBtn.style.opacity = "0.7";
+      resultBox.style.display = "block";
+      resultBox.textContent = "🔍 SCANNING FOR THREATS...";
+      resultBox.className = "scanning blinking";
 
-      if (data.result === "malicious") {
-        resultBox.textContent = "⚠️ MALICIOUS INJECTION DETECTED!";
-        resultBox.className = "malicious blinking";
-      } else {
-        resultBox.textContent = "✅ This input is SAFE.";
-        resultBox.className = "safe blinking";
+      try {
+        const res = await fetch("/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: input })
+        });
+
+        const data = await res.json();
+
+        // Simulate a slight delay for better UX scanning feel
+        setTimeout(() => {
+          if (data.result === "malicious") {
+            resultBox.textContent = "🚨 THREAT DETECTED: MALICIOUS SQL INJECTION";
+            resultBox.className = "malicious";
+          } else {
+            resultBox.textContent = "✅ SCAN PASSED: INPUT IS SECURE";
+            resultBox.className = "safe";
+          }
+          scanBtn.disabled = false;
+          scanBtn.style.opacity = "1";
+        }, 400);
+
+      } catch (err) {
+        resultBox.textContent = "❌ ERROR: COULD NOT CONNECT TO SCANNER ENGINE";
+        resultBox.className = "malicious";
+        scanBtn.disabled = false;
+        scanBtn.style.opacity = "1";
       }
     });
   </script>
