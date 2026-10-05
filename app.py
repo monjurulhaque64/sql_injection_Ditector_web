@@ -5,23 +5,21 @@ import re
 
 app = Flask(__name__)
 
-# মডেল এবং ভেক্টরাইজার লোড
 model = joblib.load("sql_model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
 
-# Regex pattern strictly for actual dangerous SQL Injection payloads
+# Dangerous Injection attack patterns
 SQLI_PATTERNS = re.compile(
     r"(\b(load_file|outfile|dumpfile|exec|concat)\b|[\';#]|\-\-|/\*|\*/|union\s+select|or\s+1\s*=\s*1|and\s+1\s*=\s*1)",
     re.IGNORECASE
 )
 
-# Standard Safe Queries Regex Check (Legitimate SQL)
+# Robust Regex to match Legitimate SELECT Queries
 SAFE_SQL_PATTERN = re.compile(
-    r"^\s*select\s+[\w\*\, \.\t\n]+\s+from\s+\w+(\s+where\s+[\w\.\= \'\"\-]+)?\s*;?\s*$",
+    r"^\s*select\s+[\w\*\, \.\t\n\(\)]+\s+from\s+[\w\.]+(\s+where\s+[\w\.\= \'\"\-]+)?\s*;?\s*$",
     re.IGNORECASE
 )
 
-# --- এই রাউটটি মিসিং ছিল, যার কারণে 404 আসছিল ---
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -38,11 +36,11 @@ def predict():
         if SQLI_PATTERNS.search(raw_data):
             return jsonify({"result": "malicious"})
 
-        # 2. Direct Safe SQL Query Override (Prevents False Positives)
+        # 2. Direct Safe SQL Query Check (Legitimate Query)
         if SAFE_SQL_PATTERN.match(raw_data):
             return jsonify({"result": "safe"})
 
-        # 3. Model Prediction for edge cases
+        # 3. ML Model Fallback for unknown edge cases
         vector = vectorizer.transform([raw_data])
         result = model.predict(vector)
         
