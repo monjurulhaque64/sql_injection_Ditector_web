@@ -5,6 +5,7 @@ import re
 
 app = Flask(__name__)
 
+# মডেল এবং ভেক্টরাইজার লোড
 model = joblib.load("sql_model.pkl")
 vectorizer = joblib.load("vectorizer.pkl")
 
@@ -19,6 +20,11 @@ SAFE_SQL_PATTERN = re.compile(
     r"^\s*select\s+[\w\*\, \.\t\n]+\s+from\s+\w+(\s+where\s+[\w\.\= \'\"\-]+)?\s*;?\s*$",
     re.IGNORECASE
 )
+
+# --- এই রাউটটি মিসিং ছিল, যার কারণে 404 আসছিল ---
+@app.route("/")
+def home():
+    return render_template("index.html")
 
 @app.route("/predict", methods=["POST"])
 def predict():
